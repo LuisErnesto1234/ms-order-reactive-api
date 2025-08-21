@@ -1,0 +1,103 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.5.4'
+    id 'io.spring.dependency-management' version '1.1.7'
+
+    // Plugin de Google Java Format
+    id 'com.github.sherter.google-java-format' version '0.9'
+
+    // Plugin de Checkstyle con reglas de Google
+    id 'checkstyle'
+
+    // Plugin de SpotBugs (opcional pero recomendado)
+    id 'com.github.spotbugs' version '5.2.5'
+
+    // Plugin de PMD (opcional)
+    id 'pmd'
+}
+
+group = 'com.luis.springcloud.eurekaserver.app'
+version = '0.0.1-SNAPSHOT'
+description = 'ms-order-api'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+// Configuración de Java version
+java {
+    sourceCompatibility = '21'
+    targetCompatibility = '21'
+}
+
+// Configuración de Google Java Format
+googleJavaFormat {
+    toolVersion = '1.19.2'
+}
+
+// Configuración de Checkstyle con reglas de Google
+checkstyle {
+    toolVersion = '10.12.4'
+    configFile = file("${rootDir}/config/checkstyle/checkstyle.xml")
+    // O usar la configuración de Google directamente:
+    // configFile =
+    // resources.text.fromUri('https://raw.githubusercontent.com/checkstyle/checkstyle/master/src/main/resources/google_checks.xml').asFile()
+}
+
+// Configuración de SpotBugs
+spotbugs {
+    ignoreFailures = false
+    showStackTraces = true
+    showProgress = true
+    effort = 'max'
+    reportLevel = 'low'
+    includeFilter = file("${rootDir}/config/spotbugs/include.xml")
+    excludeFilter = file("${rootDir}/config/spotbugs/exclude.xml")
+}
+
+// Configuración de PMD
+pmd {
+    toolVersion = '6.55.0'
+    ruleSetFiles = files("${rootDir}/config/pmd/ruleset.xml")
+    ignoreFailures = false
+}
+
+// Tareas personalizadas
+tasks.named('compileJava') {
+    dependsOn 'googleJavaFormat'
+}
+
+tasks.named('check') {
+    dependsOn 'checkstyleMain', 'checkstyleTest', 'spotbugsMain', 'pmdMain'
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-data-r2dbc'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+    compileOnly 'org.projectlombok:lombok'
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+    runtimeOnly 'org.postgresql:postgresql'
+    runtimeOnly 'org.postgresql:r2dbc-postgresql'
+    annotationProcessor 'org.projectlombok:lombok'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'io.projectreactor:reactor-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
