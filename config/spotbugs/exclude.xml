@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+    <!-- Exclude generated code -->
+    <Match>
+        <Package name="~.*\.generated\..*" />
+    </Match>
+
+    <!-- Exclude MapStruct generated implementations -->
+    <Match>
+        <Class name="~.*MapperImpl" />
+    </Match>
+
+    <!-- Exclude test classes -->
+    <Match>
+        <Class name="~.*Test.*" />
+    </Match>
+    <Match>
+        <Class name="~.*IT" />
+    </Match>
+
+    <!-- Exclude Spring Boot Application class -->
+    <Match>
+        <Class name="~.*Application" />
+    </Match>
+
+    <!-- Exclude DTOs and Entities (often have serialization issues that are acceptable) -->
+    <Match>
+        <Class name="~.*Dto" />
+        <Bug pattern="SE_NO_SERIALVERSIONUID" />
+    </Match>
+    <Match>
+        <Class name="~.*Entity" />
+        <Bug pattern="SE_NO_SERIALVERSIONUID" />
+    </Match>
+    <Match>
+        <Class name="~.*Request" />
+        <Bug pattern="SE_NO_SERIALVERSIONUID" />
+    </Match>
+    <Match>
+        <Class name="~.*Response" />
+        <Bug pattern="SE_NO_SERIALVERSIONUID" />
+    </Match>
+
+    <!-- Exclude Lombok generated methods -->
+    <Match>
+        <Bug pattern="EQ_DOESNT_OVERRIDE_EQUALS" />
+        <Method name="canEqual" />
+    </Match>
+
+    <!-- Spring Framework specific exclusions -->
+    <Match>
+        <Class name="~.*Controller" />
+        <Bug pattern="SPRING_CSRF_UNRESTRICTED_REQUEST_MAPPING" />
+    </Match>
+
+    <!-- Exclude null pointer warnings for Spring injection -->
+    <Match>
+        <Class name="~.*Service|.*Repository|.*Controller" />
+        <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE" />
+        <Method name="~.*" />
+    </Match>
+
+    <!-- Reactive specific exclusions -->
+    <Match>
+        <Bug pattern="RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT" />
+        <Method returns="reactor.core.publisher.Mono" />
+    </Match>
+    <Match>
+        <Bug pattern="RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT" />
+        <Method returns="reactor.core.publisher.Flux" />
+    </Match>
+
+    <!-- Configuration classes often have methods that appear unused but are used by Spring -->
+    <Match>
+        <Class name="~.*Config.*" />
+        <Bug pattern="UPM_UNCALLED_PRIVATE_METHOD" />
+    </Match>
+</FindBugsFilter>

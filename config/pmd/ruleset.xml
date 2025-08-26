@@ -1,0 +1,146 @@
+<?xml version="1.0"?>
+<ruleset name="Spring Boot PMD Rules"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0
+                            https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+
+    <description>PMD rules for Spring Boot reactive microservice</description>
+
+    <!-- Best Practices -->
+    <rule ref="category/java/bestpractices.xml">
+        <!-- Exclude rules that don't apply to Spring Boot -->
+        <exclude name="GuardLogStatement" />
+        <exclude name="JUnitTestContainsTooManyAsserts" />
+        <exclude name="JUnitAssertionsShouldIncludeMessage" />
+        <exclude name="AvoidReassigningParameters" />
+        <exclude name="UseVarargs" />
+    </rule>
+
+    <!-- Code Style -->
+    <rule ref="category/java/codestyle.xml">
+        <!-- Exclude rules that conflict with Spring Boot conventions -->
+        <exclude name="OnlyOneReturn" />
+        <exclude name="AtLeastOneConstructor" />
+        <exclude name="CallSuperInConstructor" />
+        <exclude name="CommentDefaultAccessModifier" />
+        <exclude name="DefaultPackage" />
+        <exclude name="EmptyMethodInAbstractClassShouldBeAbstract" />
+        <exclude name="LongVariable" />
+        <exclude name="ShortVariable" />
+        <exclude name="ShortClassName" />
+        <exclude name="ShortMethodName" />
+        <exclude name="TooManyStaticImports" />
+        <exclude name="UselessParentheses" />
+        <exclude name="UnnecessaryLocalBeforeReturn" />
+        <exclude name="UseUnderscoresInNumericLiterals" />
+        <exclude name="AvoidFinalLocalVariable" />
+        <exclude name="LocalVariableCouldBeFinal" />
+        <exclude name="MethodArgumentCouldBeFinal" />
+    </rule>
+
+    <!-- Design -->
+    <rule ref="category/java/design.xml">
+        <!-- Exclude rules that don't fit reactive/Spring Boot patterns -->
+        <exclude name="UseUtilityClass" />
+        <exclude name="AvoidCatchingGenericException" />
+        <exclude name="AvoidThrowingRawExceptionTypes" />
+        <exclude name="LawOfDemeter" />
+        <exclude name="LoosePackageCoupling" />
+        <exclude name="DataClass" />
+        <exclude name="TooManyMethods" />
+        <exclude name="TooManyFields" />
+        <exclude name="ExcessiveImports" />
+        <exclude name="CouplingBetweenObjects" />
+    </rule>
+
+    <!-- Performance -->
+    <rule ref="category/java/performance.xml">
+        <!-- Exclude rules that may not apply to reactive streams -->
+        <exclude name="AvoidInstantiatingObjectsInLoops" />
+    </rule>
+
+    <!-- Error Prone -->
+    <rule ref="category/java/errorprone.xml">
+        <!-- Exclude rules that conflict with Spring Boot patterns -->
+        <exclude name="BeanMembersShouldSerialize" />
+        <exclude name="DataflowAnomalyAnalysis" />
+        <exclude name="NullAssignment" />
+        <exclude name="UseProperClassLoader" />
+        <exclude name="AvoidLiteralsInIfCondition" />
+        <exclude name="AvoidFieldNameMatchingMethodName" />
+        <exclude name="AvoidFieldNameMatchingTypeName" />
+        <exclude name="MissingStaticMethodInNonInstantiatableClass" />
+        <exclude name="ConstructorCallsOverridableMethod" />
+    </rule>
+
+    <!-- Security -->
+    <rule ref="category/java/security.xml" />
+
+    <!-- Custom rules for Spring Boot -->
+    <rule name="AvoidPrintStackTrace"
+          language="java"
+          message="Avoid printStackTrace; consider logging framework"
+          class="net.sourceforge.pmd.lang.rule.xpath.XPathRule">
+        <description>
+            Use logging framework instead of printStackTrace for better error handling
+        </description>
+        <priority>3</priority>
+        <properties>
+            <property name="xpath">
+                <value>
+                    //PrimaryExpression/PrimaryPrefix/Name[@Image='printStackTrace']
+                </value>
+            </property>
+        </properties>
+    </rule>
+
+    <!-- Multithreading (important for reactive programming) -->
+    <rule ref="category/java/multithreading.xml">
+        <exclude name="UseConcurrentHashMap" />
+        <exclude name="DoNotUseThreads" />
+    </rule>
+
+    <!-- Custom exclusions for specific patterns -->
+
+    <!-- Exclude PMD rules for test classes -->
+    <rule ref="category/java/bestpractices.xml/JUnitTestsShouldIncludeAssert">
+        <properties>
+            <property name="violationSuppressXPath" value="//ClassOrInterfaceDeclaration[matches(@SimpleName, '.*Test.*')]" />
+        </properties>
+    </rule>
+
+    <!-- Exclude rules for Spring Boot main class -->
+    <rule ref="category/java/design.xml/UseUtilityClass">
+        <properties>
+            <property name="violationSuppressXPath" value="//ClassOrInterfaceDeclaration[.//Annotation/MarkerAnnotation/Name[@Image='SpringBootApplication']]" />
+        </properties>
+    </rule>
+
+    <!-- Exclude rules for DTOs/Entities -->
+    <rule ref="category/java/codestyle.xml/TooManyFields">
+        <properties>
+            <property name="violationSuppressXPath" value="//ClassOrInterfaceDeclaration[matches(@SimpleName, '.*(Dto|DTO|Entity|Request|Response)$')]" />
+        </properties>
+    </rule>
+
+    <!-- Configuration for specific rules -->
+    <rule ref="category/java/design.xml/CyclomaticComplexity">
+        <properties>
+            <property name="classReportLevel" value="80" />
+            <property name="methodReportLevel" value="10" />
+        </properties>
+    </rule>
+
+    <rule ref="category/java/design.xml/NPathComplexity">
+        <properties>
+            <property name="reportLevel" value="200" />
+        </properties>
+    </rule>
+
+    <rule ref="category/java/codestyle.xml/LineLength">
+        <properties>
+            <property name="limit" value="100" />
+        </properties>
+    </rule>
+</ruleset>
