@@ -3,101 +3,492 @@ plugins {
     id 'org.springframework.boot' version '3.5.4'
     id 'io.spring.dependency-management' version '1.1.7'
 
-    // Plugin de Google Java Format
-    id 'com.github.sherter.google-java-format' version '0.9'
-
-    // Plugin de Checkstyle con reglas de Google
+    // Calidad de código y formateo
+    id 'com.diffplug.spotless' version '6.25.0'
     id 'checkstyle'
-
-    // Plugin de SpotBugs (opcional pero recomendado)
-    id 'com.github.spotbugs' version '5.2.5'
-
-    // Plugin de PMD (opcional)
+    id 'com.github.spotbugs' version '6.0.26'
     id 'pmd'
+    id 'jacoco'
+    id 'org.sonarqube' version '5.1.0.4882'
+
+    // Documentación API
+    id 'org.springdoc.openapi-gradle-plugin' version '1.8.0'
+    id 'org.asciidoctor.jvm.convert' version '4.0.3'
+
+    // Análisis de dependencias y seguridad
+    id 'org.owasp.dependencycheck' version '10.0.4'
+    id 'com.github.ben-manes.versions' version '0.51.0'
+    id 'se.patrikerdes.use-latest-versions' version '0.2.18'
+
+    // Performance y análisis
+    id 'me.champeau.jmh' version '0.7.2'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
+
+    // Git hooks y release
+    id 'pl.allegro.tech.build.axion-release' version '1.18.15'
+    id 'com.gorylenko.gradle-git-properties' version '2.4.2'
+
+    // Integración con Kubernetes/Cloud
+    id 'org.springframework.boot.experimental.thin-launcher' version '1.0.31.RELEASE'
 }
 
 group = 'com.luis.springcloud.eurekaserver.app'
-version = '0.0.1-SNAPSHOT'
+version = scmVersion.version
 description = 'ms-order-api'
+
+/*
+  ===== REPOSITORIOS =====
+  Importante: aquí agregamos mavenCentral() (y otros) para que plugins y dependencias
+  como google-java-format puedan resolverse.
+*/
+repositories {
+    mavenLocal()
+    mavenCentral()
+    // Repositorios Spring (útil si usas milestone/release snapshots)
+    maven { url 'https://repo.spring.io/release' }
+    maven { url 'https://repo.spring.io/milestone' }
+    // Plugins artifacts (opcional, gradle usa plugin portal de forma automática)
+    maven { url "https://plugins.gradle.org/m2/" }
+}
 
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
     }
+    withJavadocJar()
+    withSourcesJar()
 }
 
-// Configuración de Java version
-java {
-    sourceCompatibility = '21'
-    targetCompatibility = '21'
+// ===== CONFIGURACIONES DE CALIDAD DE CÓDIGO =====
+
+spotless {
+    java {
+        googleJavaFormat('1.23.0')
+        importOrder()
+        removeUnusedImports()
+        trimTrailingWhitespace()
+        endWithNewline()
+        formatAnnotations()
+        targetExclude('**/generated/**/*.java', '**/build/**/*')
+
+        // Licencia en cada archivo (usar comillas dobles para interpolación)
+        licenseHeader """/*
+ * Copyright (C) 2025 ${project.group}
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+"""
+    }
+
+    format 'misc', {
+        target '**/*.md', '**/*.yml', '**/*.yaml', '**/*.xml', '**/*.json'
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
 }
 
-// Configuración de Google Java Format
-googleJavaFormat {
-    toolVersion = '1.19.2'
+// ===== ANÁLISIS DE SEGURIDAD =====
+
+dependencyCheck {
+    autoUpdate = true
+    format = 'ALL'
+    suppressionFile = 'config/dependency-check-suppressions.xml'
+    failBuildOnCVSS = 7.0
+    analyzers {
+        assemblyEnabled = false
+        nuspecEnabled = false
+        nodeEnabled = false
+    }
 }
 
-// Configuración de Checkstyle con reglas de Google
-checkstyle {
-    toolVersion = '10.12.4'
-    configFile = file("${rootDir}/config/checkstyle/checkstyle.xml")
-    // O usar la configuración de Google directamente:
-    // configFile =
-    // resources.text.fromUri('https://raw.githubusercontent.com/checkstyle/checkstyle/master/src/main/resources/google_checks.xml').asFile()
+// ===== ANÁLISIS DE DEPENDENCIAS =====
+
+dependencyUpdates {
+    rejectVersionIf {
+        candidate.version.contains('-alpha') ||
+                candidate.version.contains('-beta') ||
+                candidate.version.contains('-RC')
+    }
+    gradleReleaseChannel = 'current'
+    outputFormatter = 'json,xml,html'
 }
 
-// Configuración de SpotBugs
-spotbugs {
-    ignoreFailures = false
-    showStackTraces = true
-    showProgress = true
-    effort = 'max'
-    reportLevel = 'low'
-    includeFilter = file("${rootDir}/config/spotbugs/include.xml")
-    excludeFilter = file("${rootDir}/config/spotbugs/exclude.xml")
+// ===== COBERTURA AVANZADA =====
+
+jacoco {
+    toolVersion = '0.8.12'
 }
 
-// Configuración de PMD
-pmd {
-    toolVersion = '6.55.0'
-    ruleSetFiles = files("${rootDir}/config/pmd/ruleset.xml")
-    ignoreFailures = false
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required = true
+        html.required = true
+        csv.required = false
+    }
+
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: [
+                    '**/Application.class',
+                    '**/config/**',
+                    '**/dto/**',
+                    '**/entity/**',
+                    '**/*MapperImpl.class',
+                    '**/generated/**'
+            ])
+        }))
+    }
 }
 
-// Tareas personalizadas
-tasks.named('compileJava') {
-    dependsOn 'googleJavaFormat'
+jacocoTestCoverageVerification {
+    dependsOn jacocoTestReport
+    violationRules {
+        rule {
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.85
+            }
+        }
+        rule {
+            limit {
+                counter = 'BRANCH'
+                value = 'COVEREDRATIO'
+                minimum = 0.80
+            }
+        }
+        rule {
+            element = 'CLASS'
+            limit {
+                counter = 'LINE'
+                value = 'TOTALCOUNT'
+                maximum = 300
+            }
+        }
+    }
 }
 
-tasks.named('check') {
-    dependsOn 'checkstyleMain', 'checkstyleTest', 'spotbugsMain', 'pmdMain'
+// ===== DOCUMENTACIÓN API =====
+
+openApi {
+    apiDocsUrl.set("http://localhost:8080/v3/api-docs")
+    outputDir.set(file("$buildDir/docs"))
+    outputFileName.set("openapi.json")
+    waitTimeInSeconds.set(30)
 }
+
+asciidoctor {
+    dependsOn test
+    configurations 'asciidoctorExt'
+    baseDirFollowsSourceFile()
+
+    sources {
+        include 'index.adoc'
+    }
+
+    attributes 'build-gradle': file('build.gradle'),
+            'source-highlighter': 'coderay',
+            'imagesdir': './images',
+            'toc': 'left',
+            'icons': 'font',
+            'setanchors': '',
+            'idprefix': '',
+            'idseparator': '-',
+            'docinfo1': ''
+}
+
+// ===== GIT PROPERTIES =====
+
+gitProperties {
+    failOnNoGitDirectory = false
+    keys = [
+            'git.branch',
+            'git.commit.id',
+            'git.commit.id.abbrev',
+            'git.commit.time',
+            'git.tags',
+            'git.closest.tag.name',
+            'git.closest.tag.commit.count'
+    ]
+}
+
+// ===== RELEASE MANAGEMENT =====
+
+scmVersion {
+    tag {
+        prefix = 'v'
+        versionSeparator = ''
+    }
+    nextVersion {
+        suffix = 'SNAPSHOT'
+        separator = '-'
+    }
+}
+
+// ===== CONFIGURACIONES AVANZADAS =====
 
 configurations {
     compileOnly {
         extendsFrom annotationProcessor
     }
+    asciidoctorExt
+    plainJar
+    testContainers
 }
 
-repositories {
-    mavenCentral()
+// ===== DEPENDENCIAS =====
+
+ext {
+    springCloudVersion = '2024.0.0'
+    testcontainersVersion = '1.20.3'
+    mapstructVersion = '1.6.2'
+    archunitVersion = '1.3.0'
+    wiremockVersion = '3.9.1'
+    jjwtVersion = '0.12.6'
 }
 
 dependencies {
+    // Spring Boot Core
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.springframework.boot:spring-boot-starter-data-r2dbc'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
+    implementation 'org.springframework.boot:spring-boot-starter-cache'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis-reactive'
+
+    // Spring Cloud
+    implementation platform("org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}")
+    implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
+    implementation 'org.springframework.cloud:spring-cloud-starter-config'
+    implementation 'org.springframework.cloud:spring-cloud-starter-bootstrap'
+    implementation 'org.springframework.cloud:spring-cloud-starter-circuitbreaker-reactor-resilience4j'
+    implementation 'org.springframework.cloud:spring-cloud-starter-loadbalancer'
+
+    // Observability (Micrometer + OpenTelemetry)
+    implementation 'io.micrometer:micrometer-registry-prometheus'
+    implementation 'io.micrometer:micrometer-tracing-bridge-otel'
+    implementation 'io.opentelemetry:opentelemetry-exporter-zipkin'
+    implementation 'org.springframework.boot:spring-boot-starter-aop'
+
+    // Documentation
+    implementation 'org.springdoc:springdoc-openapi-starter-webflux-ui:2.6.0'
+    asciidoctorExt 'org.springframework.restdocs:spring-restdocs-asciidoctor'
+
+    // Security & JWT
+    implementation "io.jsonwebtoken:jjwt-api:${jjwtVersion}"
+    implementation "io.jsonwebtoken:jjwt-impl:${jjwtVersion}"
+    implementation "io.jsonwebtoken:jjwt-jackson:${jjwtVersion}"
+
+    // Object Mapping
+    implementation "org.mapstruct:mapstruct:${mapstructVersion}"
+    annotationProcessor "org.mapstruct:mapstruct-processor:${mapstructVersion}"
+
+    // Lombok
     compileOnly 'org.projectlombok:lombok'
-    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    // Database
     runtimeOnly 'org.postgresql:postgresql'
     runtimeOnly 'org.postgresql:r2dbc-postgresql'
-    annotationProcessor 'org.projectlombok:lombok'
+    implementation 'org.flywaydb:flyway-core'
+    implementation 'org.springframework:spring-jdbc'
+
+    // Redis (Cache/Session)
+    implementation 'org.springframework.session:spring-session-data-redis'
+
+    // Resilience
+    implementation 'io.github.resilience4j:resilience4j-spring-boot3'
+    implementation 'io.github.resilience4j:resilience4j-reactor'
+
+    // Serialization
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+    implementation 'com.fasterxml.jackson.module:jackson-module-kotlin'
+
+    // Development
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+    // Testing
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'io.projectreactor:reactor-test'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testImplementation 'org.springframework.security:spring-security-test'
+    testImplementation 'org.springframework.restdocs:spring-restdocs-webtestclient'
+
+    // Architecture Testing
+    testImplementation "com.tngtech.archunit:archunit:${archunitVersion}"
+    testImplementation "com.tngtech.archunit:archunit-junit5:${archunitVersion}"
+
+    // Integration Testing
+    testImplementation platform("org.testcontainers:testcontainers-bom:${testcontainersVersion}")
+    testImplementation 'org.testcontainers:postgresql'
+    testImplementation 'org.testcontainers:r2dbc'
+    testImplementation 'org.testcontainers:junit-jupiter'
+    testImplementation 'org.testcontainers:kafka'
+
+    // Mocking
+    testImplementation "com.github.tomakehurst:wiremock-jre8:${wiremockVersion}"
+    testImplementation 'org.mockito:mockito-inline'
+
+    // Performance Testing
+    jmh 'org.openjdk.jmh:jmh-core'
+    jmh 'org.openjdk.jmh:jmh-generator-annprocess'
+
+    // Lombok para tests
+    testCompileOnly 'org.projectlombok:lombok'
+    testAnnotationProcessor 'org.projectlombok:lombok'
+    testAnnotationProcessor "org.mapstruct:mapstruct-processor:${mapstructVersion}"
 }
+
+// ===== TAREAS PERSONALIZADAS =====
+
+// Análisis completo de seguridad
+task securityCheck {
+    dependsOn 'dependencyCheckAnalyze', 'spotbugsMain'
+    description = 'Ejecuta análisis completo de seguridad'
+    group = 'verification'
+}
+
+// Análisis de arquitectura
+task architectureTest {
+    dependsOn 'testClasses'
+    description = 'Ejecuta tests de arquitectura con ArchUnit'
+    group = 'verification'
+}
+
+// Build completo para CI/CD
+task ciBuild {
+    dependsOn 'clean', 'spotlessCheck', 'build', 'jacocoTestCoverageVerification',
+            'dependencyCheckAnalyze', 'sonarqube'
+    description = 'Build completo para CI/CD'
+    group = 'build'
+}
+
+// Preparación para release
+task releasePrep {
+    dependsOn 'clean', 'spotlessApply', 'ciBuild', 'jib'
+    description = 'Prepara release con build completo y imagen Docker'
+    group = 'release'
+}
+
+// ===== CONFIGURACIÓN DE TESTING =====
 
 tasks.named('test') {
     useJUnitPlatform()
+
+    systemProperty 'spring.profiles.active', 'test'
+    systemProperty 'junit.jupiter.execution.parallel.enabled', 'true'
+    systemProperty 'junit.jupiter.execution.parallel.mode.default', 'concurrent'
+
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+        showStandardStreams = false
+        showCauses = true
+        showExceptions = true
+        showStackTraces = true
+    }
+
+    jvmArgs = [
+            '-XX:+EnableDynamicAgentLoading',
+            '--add-opens=java.base/java.lang=ALL-UNNAMED',
+            '--add-opens=java.base/java.util=ALL-UNNAMED'
+    ]
+
+    finalizedBy 'jacocoTestReport'
+
+    // Paralelización de tests
+    maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
+
+    // Configuración de memoria
+    minHeapSize = "512m"
+    maxHeapSize = "2048m"
+}
+
+// Tests de integración separados
+task integrationTest(type: Test) {
+    description = 'Tests de integración'
+    group = 'verification'
+
+    useJUnitPlatform {
+        includeTags 'integration'
+    }
+
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+
+    shouldRunAfter test
+}
+
+// Tests de contrato
+task contractTest(type: Test) {
+    description = 'Tests de contrato'
+    group = 'verification'
+
+    useJUnitPlatform {
+        includeTags 'contract'
+    }
+
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+
+    shouldRunAfter integrationTest
+}
+
+// ===== CONFIGURACIÓN DE BUILD =====
+
+tasks.withType(JavaCompile) {
+    options.compilerArgs += [
+            '-parameters',
+            '-Xlint:unchecked',
+            '-Xlint:deprecation',
+            '-Xlint:preview'
+    ]
+    options.encoding = 'UTF-8'
+}
+
+tasks.named('jar') {
+    archiveClassifier.set('plain')
+    enabled = true
+}
+
+tasks.named('bootJar') {
+    archiveClassifier.set('')
+    launchScript()
+}
+
+// ===== INTEGRACIÓN CON SONARQUBE =====
+
+sonarqube {
+    properties {
+        property 'sonar.projectKey', "${group}:${name}"
+        property 'sonar.projectName', description
+        property 'sonar.projectVersion', version
+        property 'sonar.java.source', '21'
+        property 'sonar.sourceEncoding', 'UTF-8'
+        property 'sonar.sources', 'src/main/java'
+        property 'sonar.tests', 'src/test/java'
+        property 'sonar.java.binaries', 'build/classes/java/main'
+        property 'sonar.java.test.binaries', 'build/classes/java/test'
+        property 'sonar.coverage.jacoco.xmlReportPaths', 'build/reports/jacoco/test/jacocoTestReport.xml'
+        property 'sonar.java.checkstyle.reportPaths', 'build/reports/checkstyle/main.xml'
+        property 'sonar.java.spotbugs.reportPaths', 'build/reports/spotbugs/main.xml'
+        property 'sonar.java.pmd.reportPaths', 'build/reports/pmd/main.xml'
+        property 'sonar.dependencyCheck.reportPath', 'build/reports/dependency-check-report.xml'
+
+        // Exclusiones
+        property 'sonar.exclusions', '**/generated/**/*,**/*MapperImpl.java,**/Application.java'
+        property 'sonar.test.exclusions', '**/*Test.java,**/*IT.java'
+        property 'sonar.coverage.exclusions', '**/config/**/*,**/dto/**/*,**/entity/**/*'
+    }
 }

@@ -1,0 +1,21 @@
+# Limpiar y construir
+./gradlew clean build
+
+# Solo formatear código
+./gradlew spotlessApply
+
+# Verificar formato sin cambios
+./gradlew spotlessCheck
+
+# Análisis de calidad completo
+./gradlew qualityCheck
+
+# Ver estructura de reportes generados
+tree build/reports/
+
+# Análisis de vulnerabilidades en dependencias
+./gradlew dependencyCheckAnalyze
+
+# Escaneo de secretos en código
+brew install trufflesecurity/trufflehog/trufflehog
+trufflehog git file://. --only-verified
