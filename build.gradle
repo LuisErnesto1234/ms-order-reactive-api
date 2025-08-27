@@ -269,14 +269,6 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-cache'
     implementation 'org.springframework.boot:spring-boot-starter-data-redis-reactive'
 
-    // Spring Cloud
-    implementation platform("org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}")
-    implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
-    implementation 'org.springframework.cloud:spring-cloud-starter-config'
-    implementation 'org.springframework.cloud:spring-cloud-starter-bootstrap'
-    implementation 'org.springframework.cloud:spring-cloud-starter-circuitbreaker-reactor-resilience4j'
-    implementation 'org.springframework.cloud:spring-cloud-starter-loadbalancer'
-
     // Observability (Micrometer + OpenTelemetry)
     implementation 'io.micrometer:micrometer-registry-prometheus'
     implementation 'io.micrometer:micrometer-tracing-bridge-otel'
@@ -309,13 +301,12 @@ dependencies {
     // Redis (Cache/Session)
     implementation 'org.springframework.session:spring-session-data-redis'
 
-    // Resilience
-    implementation 'io.github.resilience4j:resilience4j-spring-boot3'
-    implementation 'io.github.resilience4j:resilience4j-reactor'
-
     // Serialization
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
     implementation 'com.fasterxml.jackson.module:jackson-module-kotlin'
+
+    // Variables de entorno
+    implementation 'me.paulschwarz:spring-dotenv:2.5.4'
 
     // Development
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
