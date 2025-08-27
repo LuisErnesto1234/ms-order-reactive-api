@@ -3,3 +3,7 @@ spring:
     name:
       ms-order-api
 
+  r2dbc:
+    username: postgres
+    password: admin123
+    url: r2dbc:postgresql://localhost:5432/order_api_reactive
